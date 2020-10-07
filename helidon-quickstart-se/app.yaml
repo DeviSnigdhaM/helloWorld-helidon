@@ -18,10 +18,10 @@ kind: Service
 apiVersion: v1
 metadata:
   name: helidon-quickstart-se
+  namespace: test-expenses
   labels:
     app: helidon-quickstart-se
 spec:
-  type: NodePort
   selector:
     app: helidon-quickstart-se
   ports:
@@ -33,6 +33,7 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: helidon-quickstart-se
+  namespace: test-expenses
 spec:
   replicas: 1
   selector:
@@ -46,8 +47,33 @@ spec:
     spec:
       containers:
       - name: helidon-quickstart-se
-        image: helidon-quickstart-se
+        image: us-phoenix-1.ocir.io/ax74vd5jywob/financials/helloWorld:image_tag
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
 ---
+  apiVersion: networking.istio.io/v1alpha3
+  kind: VirtualService
+  metadata:
+    name: helidon-quickstart-se-vs
+    namespace: test-expenses
+  spec:
+    hosts:
+    - "*"
+    gateways:
+    - istio-system/spectra-istio-config-gateway
+    http:
+    - match:
+      - uri:
+          prefix: /OCH-techtalk/
+      retries:
+        attempts: 3
+        perTryTimeout: 60s
+      rewrite:
+        uri: /
+      route:
+      - destination:
+          host: helidon-quickstart-se
+          port:
+            number: 8080
+      timeout: 60s
